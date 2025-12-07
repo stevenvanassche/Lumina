@@ -1,0 +1,122 @@
+# Lumina Photo Analysis Pipeline - Production
+#
+# This compose file pulls published images from Docker Hub.
+
+services:
+  # CPU variant - pulls from Docker Hub
+  lumina-cpu:
+    image: stevenvanassche/lumina:cpu-1.0.0
+    container_name: lumina-cpu
+    environment:
+      # Mode selection
+      - LUMINA_MODE=cpu
+
+      # Performance tuning
+      - LUMINA_WORKERS=${LUMINA_WORKERS:-2}
+      - LUMINA_BATCH_SIZE=${LUMINA_BATCH_SIZE:-5}
+      - LUMINA_PARALLEL_BATCHES=${LUMINA_PARALLEL_BATCHES:-5}
+      - LUMINA_RAY_CPUS=${LUMINA_RAY_CPUS:-auto}
+      - LUMINA_TORCH_THREADS=${LUMINA_TORCH_THREADS:-4}
+
+      # Configuration
+      - LUMINA_LOG_LEVEL=${LUMINA_LOG_LEVEL:-INFO}
+      - LUMINA_ENABLE_CHECKPOINTS=${LUMINA_ENABLE_CHECKPOINTS:-true}
+      - LUMINA_EXECUTION_MODE=${LUMINA_EXECUTION_MODE:-normal_scan}
+
+      # Ray configuration
+      - RAY_ACCEL_ENV_VAR_OVERRIDE_ON_ZERO=0
+
+    volumes:
+      # Required: Photos to process (read-write for XMP and JSON sidecar mode)
+      - ${PHOTOS_PATH:-./photos}:/data/photos
+
+      # Required: Cache for models, checkpoints, and logs
+      - ${CACHE_PATH:-./cache}:/data/cache
+
+    restart: no
+
+    # Shared memory size for Ray object store
+    shm_size: '2gb'
+
+    # Resource limits (optional)
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '8'
+    #       memory: 16G
+
+    profiles:
+      - cpu
+
+  # GPU variant - pulls from Docker Hub
+  lumina-gpu:
+    image: stevenvanassche/lumina:gpu-1.0.0
+    container_name: lumina-gpu
+    environment:
+      # Mode selection
+      - LUMINA_MODE=gpu
+
+      # Performance tuning (can handle larger batches with GPU)
+      - LUMINA_WORKERS=${LUMINA_WORKERS:-2}
+      - LUMINA_BATCH_SIZE=${LUMINA_BATCH_SIZE:-7}
+      - LUMINA_PARALLEL_BATCHES=${LUMINA_PARALLEL_BATCHES:-10}
+      - LUMINA_RAY_CPUS=${LUMINA_RAY_CPUS:-auto}
+      - LUMINA_TORCH_THREADS=${LUMINA_TORCH_THREADS:-}
+
+      # Configuration
+      - LUMINA_LOG_LEVEL=${LUMINA_LOG_LEVEL:-INFO}
+      - LUMINA_ENABLE_CHECKPOINTS=${LUMINA_ENABLE_CHECKPOINTS:-true}
+      - LUMINA_EXECUTION_MODE=${LUMINA_EXECUTION_MODE:-normal_scan}
+
+      # Ray configuration
+      - RAY_ACCEL_ENV_VAR_OVERRIDE_ON_ZERO=0
+
+    volumes:
+      # Required: Photos to process (read-write for XMP and JSON sidecar mode)
+      - ${PHOTOS_PATH:-./photos}:/data/photos
+
+      # Required: Cache for models, checkpoints, and logs
+      - ${CACHE_PATH:-./cache}:/data/cache
+
+    restart: no
+
+    # Shared memory size for Ray object store
+    shm_size: '2gb'
+
+    # GPU configuration
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all  # or specific count: 1
+              capabilities: [gpu]
+
+    profiles:
+      - gpu
+
+# Usage examples:
+#
+# CPU variant (pulls stevenvanassche/lumina:cpu-1.0.0):
+#   docker-compose -f docker/docker-compose.yml --profile cpu up
+#   docker-compose -f docker/docker-compose.yml --profile cpu up -d  (detached)
+#
+# GPU variant (pulls stevenvanassche/lumina:gpu-1.0.0):
+#   docker-compose -f docker/docker-compose.yml --profile gpu up
+#   docker-compose -f docker/docker-compose.yml --profile gpu up -d
+#
+# Pull latest version before running:
+#   docker-compose -f docker/docker-compose.yml pull
+#   docker-compose -f docker/docker-compose.yml --profile cpu up
+#
+# Stop:
+#   docker-compose -f docker/docker-compose.yml --profile cpu down
+#   docker-compose -f docker/docker-compose.yml --profile gpu down
+#
+# View logs:
+#   docker-compose -f docker/docker-compose.yml --profile cpu logs -f
+#   docker-compose -f docker/docker-compose.yml --profile gpu logs -f
+#
+# Environment variables (optional):
+#   PHOTOS_PATH=/path/to/photos MODELS_PATH=/path/to/models \
+#   docker-compose -f docker/docker-compose.yml --profile cpu up

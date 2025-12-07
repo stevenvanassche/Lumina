@@ -1,0 +1,4 @@
+_publication/
+_deprecated/
+*.env
+git.txt
