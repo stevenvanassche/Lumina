@@ -130,22 +130,27 @@ Lumina writes XMP metadata optimized for Lightroom Classic:
 Process your photo collection with Lumina:
 
 ```bash
-# Run Lumina on your photo collection
+# Run Lumina on your photo collection with RAW+JPEG pairing (recommended)
 docker run --rm \
   -v /path/to/your/Photos:/data/photos \
   -v /path/to/lumina-cache:/data/cache \
+  -e LUMINA_RAW_SUPPORT=on \
   stevenvanassche/lumina:cpu-latest
 ```
 
-**Result (RAW+JPEG workflow):**
+> **New in v1.1:** Enable `LUMINA_RAW_SUPPORT=on` to automatically pair RAW and JPEG files with the same base filename. The JPEG is used for faster AI analysis, and both files get identical XMP sidecars with the detected keywords.
+
+**Result (RAW+JPEG workflow with LUMINA_RAW_SUPPORT=on):**
 ```
 /path/to/your/Photos/
 ├── bird001.NEF          ← RAW file (for Lightroom)
-├── bird001.JPG          ← JPEG file (for other software)
-├── bird001.xmp          ← AI-generated metadata (shared by both)
+├── bird001.JPG          ← JPEG file (used for AI analysis)
+├── bird001.NEF.xmp      ← XMP for RAW (read by Lightroom)
+├── bird001.JPG.xmp      ← XMP for JPEG (same keywords)
 ├── bird002.NEF
 ├── bird002.JPG
-└── bird002.xmp
+├── bird002.NEF.xmp
+└── bird002.JPG.xmp
 ```
 
 **Result (JPEG-only workflow - requires ExifTool later):**
@@ -690,6 +695,7 @@ If photos are on NAS:
 
 1. **Shoot photos RAW + JPEG** → Copy RAW + JPEG photos to computer
 2. **Run Lumina** → Generate AI metadata (species, objects, GPS)
+   - Or enable **Watch Mode** (v1.1+) with `LUMINA_WATCH_MODE=on` for continuous processing
 3. **Import to Lightroom** → XMP sidecars read automatically
 4. **Verify keywords** → Check Keyword List for hierarchical trees
 5. **Add manual keywords** → Locations, events, ratings
@@ -731,5 +737,5 @@ If photos are on NAS:
 
 ---
 
-**Version**: Lumina 1.0.0
-**Last Updated**: 2025-12-07
+**Version**: Lumina 1.1.0
+**Last Updated**: 2025-12-21

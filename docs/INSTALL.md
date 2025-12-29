@@ -218,9 +218,9 @@ PHOTOS_PATH=./photos
 CACHE_PATH=./cache
 
 # GPU Performance tuning
-LUMINA_WORKERS=2
-LUMINA_BATCH_SIZE=7
-LUMINA_PARALLEL_BATCHES=10
+LUMINA_WORKERS=1
+LUMINA_BATCH_SIZE=10
+LUMINA_PARALLEL_BATCHES=3
 
 # Logging (optional)
 LUMINA_LOG_LEVEL=INFO
@@ -240,9 +240,9 @@ PHOTOS_PATH=./photos
 CACHE_PATH=./cache
 
 # GPU Performance tuning
-LUMINA_WORKERS=2
-LUMINA_BATCH_SIZE=7
-LUMINA_PARALLEL_BATCHES=10
+LUMINA_WORKERS=1
+LUMINA_BATCH_SIZE=10
+LUMINA_PARALLEL_BATCHES=3
 
 # Logging (optional)
 LUMINA_LOG_LEVEL=INFO
@@ -259,9 +259,9 @@ LUMINA_ENABLE_CHECKPOINTS=true
 |----------|---------|-------------|
 | `PHOTOS_PATH` | `./photos` | Directory containing photos to process |
 | `CACHE_PATH` | `./cache` | Directory for models, checkpoints, logs |
-| `LUMINA_WORKERS` | `2` | Number of parallel workers |
-| `LUMINA_BATCH_SIZE` | `5` (CPU) / `7` (GPU) | Photos per batch |
-| `LUMINA_PARALLEL_BATCHES` | `2` (CPU) / `10` (GPU) | Concurrent batches |
+| `LUMINA_WORKERS` | `2` (CPU) / `1` (GPU) | Number of parallel workers |
+| `LUMINA_BATCH_SIZE` | `5` (CPU) / `10` (GPU) | Photos per batch |
+| `LUMINA_PARALLEL_BATCHES` | `2` (CPU) / `3` (GPU) | Concurrent batches |
 | `LUMINA_TORCH_THREADS` | `4` (CPU) / `not used` (GPU) | PyTorch CPU threads |
 | `LUMINA_LOG_LEVEL` | `INFO` | Logging verbosity (DEBUG, INFO, WARNING, ERROR) |
 | `LUMINA_EXECUTION_MODE` | `normal_scan` | Processing mode (see below) |
@@ -271,6 +271,106 @@ LUMINA_ENABLE_CHECKPOINTS=true
 - `force_update` - Reprocess all photos, overwrite existing XMP files
 - `normal_scan` - **Recommended** - Process photos without metadata or with outdated metadata
 - `quick_scan` - Only process photos without XMP files (faster for incremental runs)
+
+#### Option C: Watch Mode Configuration (New in v1.1)
+
+Watch mode enables continuous monitoring for new photos. After the initial scan, Lumina keeps running and automatically processes new photos as they're added.
+
+**Linux / macOS / WSL2:**
+
+```bash
+cat > .env << 'EOF'
+# Required paths
+PHOTOS_PATH=./photos
+CACHE_PATH=./cache
+
+# Watch mode (new in v1.1)
+LUMINA_WATCH_MODE=on
+LUMINA_MODEL_IDLE_TIMEOUT=auto
+
+# Performance tuning (adjust for your hardware)
+LUMINA_WORKERS=2
+LUMINA_BATCH_SIZE=5
+LUMINA_PARALLEL_BATCHES=2
+
+# Logging (optional)
+LUMINA_LOG_LEVEL=INFO
+EOF
+```
+
+**Watch Mode Environment Variables:**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `LUMINA_WATCH_MODE` | `off` | Enable watch mode: `on` or `off` |
+| `LUMINA_MODEL_IDLE_TIMEOUT` | `auto` | When to unload idle models (see below) |
+| `LUMINA_WATCH_IDLE_EXIT` | `0` | Auto-exit after N seconds of inactivity (0=disabled) |
+
+**Model Idle Timeout Options:**
+- `auto` - Smart default: models unload after 300s idle in watch mode (not relevant in batch mode)
+- `disabled` - Models stay loaded permanently (fastest response, highest memory)
+- `<seconds>` - Unload after N seconds idle (e.g., `300` = 5 minutes)
+
+**Watch Idle Exit:** Set `LUMINA_WATCH_IDLE_EXIT` to automatically exit watch mode after a period of inactivity. Useful for batch-style processing where you want Lumina to exit after all new files are processed. Set to `0` (default) to watch indefinitely.
+
+> **GPU Memory Note:** In watch mode with `auto`, models unload after 5 min idle to free ~2-4GB VRAM. Set `disabled` to keep models loaded for instant processing.
+
+#### Option D: RAW+JPEG Pairing Configuration (New in v1.1)
+
+RAW+JPEG pairing enables intelligent grouping of RAW and JPEG files with the same base filename. When enabled:
+- JPEG is used for AI analysis (faster than RAW processing)
+- One XMP sidecar file is created for the pair (shared by both RAW and JPEG)
+- Files are only paired if they're in the **same directory** with the same base name
+
+**Linux / macOS / WSL2:**
+
+```bash
+cat > .env << 'EOF'
+# Required paths
+PHOTOS_PATH=./photos
+CACHE_PATH=./cache
+
+# RAW+JPEG pairing (new in v1.1)
+LUMINA_RAW_SUPPORT=on
+
+# Performance tuning (adjust for your hardware)
+LUMINA_WORKERS=2
+LUMINA_BATCH_SIZE=5
+LUMINA_PARALLEL_BATCHES=2
+
+# Logging (optional)
+LUMINA_LOG_LEVEL=INFO
+EOF
+```
+
+**RAW Support Environment Variables:**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `LUMINA_RAW_SUPPORT` | `on` | RAW file handling mode (see below) |
+
+**RAW Support Modes:**
+- `on` (default) - Enable RAW+JPEG pairing:
+  - Group RAW+JPEG as single photo when same base filename in same directory
+  - JPEG used for AI analysis (faster)
+  - One XMP sidecar is created for the pair (shared by both files)
+  - RAW-only files are converted to JPEG for analysis (cached)
+  - Works fine with JPEG-only libraries too (no overhead)
+- `off` - Only process JPEG/PNG files, ignore RAW files
+- `only` - Only process RAW files (no JPEG/PNG)
+
+**Supported RAW Formats:**
+- Nikon: `.nef`
+- Canon: `.cr2`, `.cr3`
+- Sony: `.arw`
+- Adobe: `.dng`
+- Fujifilm: `.raf`
+- Olympus: `.orf`
+- Panasonic: `.rw2`
+
+> **⚠️ RAW Format Limitations:** Lumina uses [LibRaw](https://www.libraw.org/supported-cameras) for RAW processing. Some newer formats like Nikon Z9 High Efficiency (HE/HE*) are not yet supported. For unsupported formats, shoot RAW+JPEG and enable pairing mode.
+
+> **💡 Tip:** RAW+JPEG pairing is ideal for photographers who shoot RAW+JPEG. The JPEG provides fast AI analysis, and the pair shares a single XMP sidecar with keyword metadata.
 
 For complete environment variable documentation, see [Configuration Reference](#configuration-reference).
 
@@ -358,9 +458,10 @@ copy "C:\Path\To\Your\Photos\*.NEF" "photos\"
 ```
 
 **Supported File Types:**
-- **Images**: `.jpg`, `.jpeg`, `.png`
+- **Standard**: `.jpg`, `.jpeg`, `.png`
+- **RAW (enabled by default)**: `.nef`, `.cr2`, `.cr3`, `.arw`, `.dng`, `.raf`, `.orf`, `.rw2`
 
-> **💡 Tip for RAW+JPEG workflows:** If you shoot RAW+JPEG, include both in the `photos/` directory. Lumina will process the JPEG files and create XMP sidecars that work with both the RAW and JPEG files.
+> **💡 RAW+JPEG pairing is enabled by default.** Lumina pairs files with matching base names (e.g., `IMG_001.jpg` + `IMG_001.nef`), uses the JPEG for AI analysis, and creates a single XMP sidecar for the pair. If you only have JPEG files, this works seamlessly with no overhead.
 
 ### Step 6: Start Lumina
 
@@ -384,6 +485,46 @@ First run will download models (~2.5GB, 5-15 minutes depending on internet speed
 
 Expected performance: **~10 photos/second** (RTX 5090)
 
+#### Watch Mode (New in v1.1)
+
+Watch mode keeps Lumina running after the initial scan, monitoring for new photos:
+
+```bash
+# CPU watch mode
+LUMINA_WATCH_MODE=on docker compose --profile cpu up
+
+# GPU watch mode
+LUMINA_WATCH_MODE=on docker compose --profile gpu up
+
+# Or configure in .env file and run normally
+# LUMINA_WATCH_MODE=on
+docker compose --profile cpu up
+```
+
+Watch mode is ideal for:
+- **Tethered shooting** - Process photos as they're captured
+- **Import workflows** - Automatically tag photos as they're copied to your library
+- **Continuous monitoring** - Keep running in the background
+
+Press `Ctrl+C` to stop watch mode.
+
+#### RAW+JPEG Pairing Mode (New in v1.1)
+
+RAW+JPEG pairing is **enabled by default** and groups RAW and JPEG files with the same base filename. If you need to disable it:
+
+```bash
+# Disable RAW support (JPEG-only mode)
+LUMINA_RAW_SUPPORT=off docker compose --profile cpu up
+
+# Combine watch mode with RAW support (both work with default settings)
+LUMINA_WATCH_MODE=on docker compose --profile gpu up
+```
+
+RAW+JPEG pairing is ideal for:
+- **Wildlife photographers** - Shoot RAW+JPEG for backup, get AI keywords fast
+- **Lightroom users** - RAW files with XMP sidecars are read automatically
+- **Large collections** - JPEG analysis is faster, RAW gets same metadata
+
 #### Run in Background (Detached Mode)
 
 ```bash
@@ -392,6 +533,9 @@ docker compose --profile cpu up -d
 
 # GPU mode
 docker compose --profile gpu up -d
+
+# Watch mode in background
+LUMINA_WATCH_MODE=on docker compose --profile cpu up -d
 
 # View logs
 docker compose logs -f
@@ -405,8 +549,8 @@ docker compose logs -f
 
 1. **Check logs** - You should see model download progress, then photo processing:
    ```
-   [INFO] Model warmup complete (34.2s)
-   [INFO] Processing photos: 100%|████████| 150/150 [2:30<00:00, 1.0 photo/s]
+   ✅ Warmup complete (34.2s) - starting photo processing
+   Processing: 100%|████████████████| 150/150 [02:30<00:00, 1.00 photo/s]
    ```
 
 2. **Check XMP and JSON files** - XMP and JSON sidecar files should appear next to your photos:
@@ -430,6 +574,7 @@ docker compose logs -f
    # models/      - Downloaded AI models
    # checkpoints/ - Processing state (for resume)
    # logs/        - Processing logs
+   # image_cache/ - RAW to JPEG conversions (when RAW support enabled)
    ```
 
 ### Using Results in Photo Management Software
@@ -439,7 +584,7 @@ Lumina writes metadata to XMP sidecar files that are compatible with major photo
 **✅ Validated Compatibility:**
 - **On1 PhotoRAW** - Full hierarchical keyword support (JPEG files with of without RAW files)
 - **Immich** - External Libraries with XMP sidecar import (JPEG files)
-- **Adobe Lightroom Classic** - Full hierarchical keyword support (only with both RAW and JPEG files)
+- **Adobe Lightroom Classic** - Full hierarchical keyword support (RAW files required)
 
 
 **Expected Compatibility:**
@@ -458,6 +603,7 @@ Lumina writes metadata to XMP sidecar files that are compatible with major photo
 ### Next Steps
 
 - **Add more photos** - Just copy new photos to the `photos/` directory and restart Lumina
+- **Enable watch mode** - Set `LUMINA_WATCH_MODE=on` to continuously monitor for new photos *(New in v1.1)*
 - **Adjust performance** - Edit `.env` to tune batch sizes and worker counts
 - **Monitor progress** - Use `docker compose logs -f` to watch real-time progress
 - **Explore results** - Open photos in Lightroom or On1 PhotoRAW to see hierarchical keyword trees
@@ -757,9 +903,9 @@ LUMINA_TORCH_THREADS=4            # PyTorch thread count
 # ============================================
 # Performance Tuning - GPU Mode
 # ============================================
-LUMINA_WORKERS=2                  # Parallel workers (1-10 recommended)
-LUMINA_BATCH_SIZE=7               # Photos per batch (5-10 recommended)
-LUMINA_PARALLEL_BATCHES=10        # Concurrent batches (1-20 recommended)
+LUMINA_WORKERS=1                  # Parallel workers (1 recommended for GPU)
+LUMINA_BATCH_SIZE=10              # Photos per batch (10-20 recommended)
+LUMINA_PARALLEL_BATCHES=3         # Concurrent batches (2-4 recommended)
 LUMINA_RAY_CPUS=auto              # Ray CPU allocation
 # LUMINA_TORCH_THREADS not needed for GPU
 
@@ -770,20 +916,34 @@ LUMINA_EXECUTION_MODE=normal_scan    # force_update | normal_scan | quick_scan
 LUMINA_ENABLE_CHECKPOINTS=true       # Enable resume capability
 LUMINA_LOG_LEVEL=INFO                # DEBUG | INFO | WARNING | ERROR
 
+# ============================================
+# Watch Mode (New in v1.1)
+# ============================================
+LUMINA_WATCH_MODE=off                # on | off (default: off)
+LUMINA_MODEL_IDLE_TIMEOUT=auto       # auto | disabled | <seconds>
+LUMINA_WATCH_IDLE_EXIT=0             # 0 = disabled, or seconds of idle before exit
+
+# ============================================
+# RAW File Support (New in v1.1)
+# ============================================
+LUMINA_RAW_SUPPORT=on                # on | off | only (default: on)
+# on   = RAW+JPEG pairing - group by filename, use JPEG for analysis
+# off  = Only process JPEG/PNG files (ignore RAW files)
+# only = Only process RAW files (no JPEG/PNG)
+
 ```
 
 ### Performance Tuning Guidelines
 
 **CPU Mode (No GPU):**
-- **Low-end CPU (4 cores)**: `WORKERS=1, BATCH_SIZE=3, PARALLEL_BATCHES=1, LUMINA_TORCH_THREADS=1`
-- **Mid-range CPU (8 cores)**: `WORKERS=2, BATCH_SIZE=5, PARALLEL_BATCHES=5, LUMINA_TORCH_THREADS=4` (default)
-- **High-end CPU (16+ cores)**: `WORKERS=5, BATCH_SIZE=5, PARALLEL_BATCHES=5, LUMINA_TORCH_THREADS=4`
+- **Low-end CPU (4 cores)**: `WORKERS=1, BATCH_SIZE=3, PARALLEL_BATCHES=1, LUMINA_TORCH_THREADS=2`
+- **Mid-range CPU (8 cores)**: `WORKERS=2, BATCH_SIZE=5, PARALLEL_BATCHES=2, LUMINA_TORCH_THREADS=4` (default)
+- **High-end CPU (16+ cores)**: `WORKERS=4, BATCH_SIZE=5, PARALLEL_BATCHES=4, LUMINA_TORCH_THREADS=8`
 
 **GPU Mode:**
-- **8GB VRAM**: `WORKERS=1, BATCH_SIZE=4, PARALLEL_BATCHES=2`
-- **12GB VRAM**: `WORKERS=2, BATCH_SIZE=7, PARALLEL_BATCHES=10` (default)
-- **16GB VRAM**: `WORKERS=5, BATCH_SIZE=10, PARALLEL_BATCHES=1 0`
-- **24GB+ VRAM (RTX 5090)**: `WORKERS=10, BATCH_SIZE=10, PARALLEL_BATCHES=20`
+- **4GB VRAM (GTX 1650)**: `WORKERS=1, BATCH_SIZE=5, PARALLEL_BATCHES=2`
+- **8GB VRAM (RTX 3070, RTX 4060)**: `WORKERS=1, BATCH_SIZE=10, PARALLEL_BATCHES=3` (default)
+- **12GB+ VRAM (RTX 3080, RTX 4080)**: `WORKERS=1, BATCH_SIZE=20, PARALLEL_BATCHES=4`
 
 **Memory Requirements:**
 - CPU mode: ~8GB RAM minimum, 16GB recommended
@@ -801,7 +961,7 @@ LUMINA_LOG_LEVEL=INFO                # DEBUG | INFO | WARNING | ERROR
 docker compose down
 
 # Pull new image version
-docker pull stevenvanassche/lumina:cpu-1.0.0-rc4  # or latest tag
+docker pull stevenvanassche/lumina:cpu-1.1.0-rc1  # or latest tag
 
 # Update docker-compose.yml to use new image tag
 
@@ -861,6 +1021,6 @@ tar -czf xmp-backup-$(date +%Y%m%d).tar.gz photos/*.xmp
 
 ## Version
 
-This installation guide is for Lumina **v1.0.0**.
+This installation guide is for Lumina **v1.1.0**.
 
 For version history, see [CHANGELOG.md](../CHANGELOG.md).

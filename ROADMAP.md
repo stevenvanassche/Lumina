@@ -2,8 +2,8 @@
 
 This document outlines the planned features and improvements for Lumina. The roadmap is subject to change based on community feedback and priorities.
 
-**Current Version**: 1.0.0
-**Last Updated**: 2025-12-07
+**Current Version**: 1.1.0
+**Last Updated**: 2025-12-21
 
 ---
 
@@ -17,20 +17,41 @@ We want to hear from you! Help us prioritize features by:
 
 --- 
 
-## 🎯 v1.1 - Short-term Quality of Life Improvements
+## ✅ v1.1.0 - Watch Mode Release (December 2025)
+
+**Focus**: Continuous monitoring and smart model management
+
+**Released**: December 2025
+
+### ✅ Implemented Features
+
+- [x] **Watch Mode / Auto-processing**
+  - Monitor photos directory for new files
+  - Automatically process new photos as they arrive
+  - Ideal for tethered shooting or live imports
+  - File stability detection (waits for files to finish copying)
+  - Enable with `LUMINA_WATCH_MODE=on`
+
+- [x] **Model Idle Timeout**
+  - Smart model unloading to save memory/VRAM when idle
+  - Configurable timeout: `auto`, `disabled`, or seconds
+  - Auto mode: unloads after 300s idle in watch mode
+  - Enable with `LUMINA_MODEL_IDLE_TIMEOUT=auto`
+
+- [x] **Model Loading Retry with Backoff**
+  - Automatic retry with exponential backoff on OOM errors
+  - Graceful recovery from temporary memory pressure
+  - Improved stability for long-running watch mode
+
+---
+
+## 🎯 v1.2 - Short-term Quality of Life Improvements
 
 **Focus**: Quick wins and user experience enhancements based on early feedback
 
 **Target**: Q1 2026
 
 ### Workflow Enhancements
-
-- [ ] **Watch Mode / Auto-processing**
-  - Monitor photos directory for new files
-  - Automatically process new photos as they arrive
-  - Ideal for tethered shooting or live imports
-  - Configurable file system watch with debouncing
-  - Enable with `LUMINA_WATCH_MODE=true`
 
 - [ ] **Selective Processor Control**
   - Enable/disable individual processors (EXIF, RT-DETR, iNat21, XMP)
@@ -489,6 +510,15 @@ We want to hear from you! Help us prioritize features by:
 ---
 
 ## 🗓️ Version History
+
+### v1.1.0 (December 2025) - Watch Mode Release
+
+**New Features:**
+- ✅ Watch mode for continuous file monitoring
+- ✅ Model idle timeout for memory management
+- ✅ Model loading retry with exponential backoff
+- ✅ File stability detection for reliable watch mode
+- ✅ Smart model lifecycle management
 
 ### v1.0.0 (December 2025) - Initial Release
 

@@ -167,7 +167,16 @@ docker run --rm \
   -v /home/user/Photos/Wildlife:/data/photos \
   -v /home/user/lumina-cache:/data/cache \
   stevenvanassche/lumina:cpu-latest
+
+# Or with RAW+JPEG pairing (new in v1.1)
+docker run --rm \
+  -v /home/user/Photos/Wildlife:/data/photos \
+  -v /home/user/lumina-cache:/data/cache \
+  -e LUMINA_RAW_SUPPORT=on \
+  stevenvanassche/lumina:cpu-latest
 ```
+
+> **New in v1.1:** Enable `LUMINA_RAW_SUPPORT=on` to automatically pair RAW and JPEG files with the same base filename. The JPEG is used for AI analysis, and both files get XMP sidecars with identical keywords.
 
 **Result:**
 ```
@@ -402,6 +411,11 @@ IMMICH_VERSION=release
    - Immich automatically detects XMP changes (if "Watch for changes" is enabled)
    - Or manually trigger rescan in Immich UI
 
+6. **Watch Mode (New in v1.1):**
+   - Enable `LUMINA_WATCH_MODE=on` for continuous monitoring
+   - Lumina automatically processes new photos as they're added
+   - Combine with Immich's "Watch for changes" for seamless integration
+
 ---
 
 ## XMP Sidecar Limitations in Immich
@@ -515,6 +529,7 @@ You can use **both** Lumina's specialized models **and** Immich's built-in ML fe
 
 3. **Workflow:**
    - Run Lumina on new photo batches → generates XMP
+   - Or enable **Watch Mode** (v1.1+) for continuous processing
    - Immich imports photos + XMP metadata
    - Use Immich UI to browse, search, and organize
    - Immich's ML adds additional metadata (faces, CLIP embeddings)
@@ -677,5 +692,5 @@ If mounting photos from NAS:
 
 ---
 
-**Version**: Lumina 1.0.0
-**Last Updated**: 2025-12-07
+**Version**: Lumina 1.1.0
+**Last Updated**: 2025-12-21

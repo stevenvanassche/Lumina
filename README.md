@@ -1,6 +1,6 @@
 # Lumina - AI Photo Metadata Pipeline
 
-> **Status**: Version 1.0.0 - Production Release
+> **Status**: Version 1.1.0 - Production Release
 
 AI-powered photo analysis pipeline that extracts EXIF metadata, detects objects, classifies species, and writes results to XMP sidecar files compatible with Adobe Lightroom Classic, On1 PhotoRAW, Immich and other photo management software.
 
@@ -16,6 +16,8 @@ AI-powered photo analysis pipeline that extracts EXIF metadata, detects objects,
 - ⚡ **GPU Acceleration** - 10x faster processing with NVIDIA GPU
 - 🔄 **Resumable Processing** - Checkpoint-based pipeline for large collections
 - 🐳 **Easy Deployment** - Single docker-compose command to start
+- 👁️ **Watch Mode** *(New in v1.1)* - Continuous monitoring for new photos
+- 📷 **RAW+JPEG Pairing** *(New in v1.1)* - Smart pairing of RAW and JPEG files
 
 ## Quick Start
 
@@ -39,6 +41,9 @@ EOF
 # Add your photos to the photos/ directory, then run:
 docker compose --profile cpu up    # CPU mode (~1 photo/sec)
 docker compose --profile gpu up    # GPU mode (~10 photos/sec, requires NVIDIA GPU + WSL2 on Windows)
+
+# NEW in v1.1: Watch mode - continuously monitor for new photos
+LUMINA_WATCH_MODE=on docker compose --profile cpu up
 ```
 
 **First Run:** Models download automatically (~2.5GB, 5-15 minutes)
@@ -71,7 +76,7 @@ docker compose --profile gpu up    # GPU mode (~10 photos/sec, requires NVIDIA G
 ✅ **Validated:**
 - **On1 PhotoRAW** - Full hierarchical keyword support (JPEG files with or without RAW files)
 - **Immich** - External Libraries with XMP sidecar import (JPEG files)
-- **Adobe Lightroom Classic** - Full hierarchical keyword support (only with both RAW and JPEG files)
+- **Adobe Lightroom Classic** - Full hierarchical keyword support (RAW files required)
 
 ✅ **Expected:**
 - Capture One
@@ -110,9 +115,14 @@ Basic configuration via `.env` file:
 |----------|-------------|
 | `PHOTOS_PATH` | Directory containing your photos (required) |
 | `CACHE_PATH` | Directory for models, checkpoints, and logs (required) |
-| `LUMINA_WORKERS` | Number of parallel workers (default: 2) |
-| `LUMINA_BATCH_SIZE` | Photos per batch - 5 for CPU, 7 for GPU (default: 5) |
+| `LUMINA_WORKERS` | Number of parallel workers (default: 2 CPU, 1 GPU) |
+| `LUMINA_BATCH_SIZE` | Photos per batch (default: 5 CPU, 10 GPU) |
 | `LUMINA_LOG_LEVEL` | Logging level: DEBUG, INFO, WARNING, ERROR (default: INFO) |
+| `LUMINA_EXECUTION_MODE` | Processing mode: quick_scan/normal_scan/force_update (default: normal_scan) |
+| `LUMINA_WATCH_MODE` | Watch mode: on/off (default: off) *(New in v1.1)* |
+| `LUMINA_MODEL_IDLE_TIMEOUT` | Model unload timeout: auto/disabled/<seconds> (default: auto) *(New in v1.1)* |
+| `LUMINA_WATCH_IDLE_EXIT` | Auto-exit after N seconds idle, 0=disabled (default: 0) *(New in v1.1)* |
+| `LUMINA_RAW_SUPPORT` | RAW file handling: on/off/only (default: on) *(New in v1.1)* |
 
 **Example `.env` for CPU mode:**
 ```bash
@@ -126,9 +136,24 @@ LUMINA_BATCH_SIZE=5
 ```bash
 PHOTOS_PATH=./photos
 CACHE_PATH=./cache
-LUMINA_WORKERS=2
-LUMINA_BATCH_SIZE=7
-LUMINA_PARALLEL_BATCHES=10
+LUMINA_WORKERS=1
+LUMINA_BATCH_SIZE=10
+LUMINA_PARALLEL_BATCHES=3
+```
+
+**Example `.env` for Watch mode (continuous monitoring):**
+```bash
+PHOTOS_PATH=./photos
+CACHE_PATH=./cache
+LUMINA_WATCH_MODE=on
+LUMINA_MODEL_IDLE_TIMEOUT=auto   # auto = unload after 300s idle in watch mode
+```
+
+**Example `.env` to disable RAW support (JPEG-only mode):**
+```bash
+PHOTOS_PATH=./photos
+CACHE_PATH=./cache
+LUMINA_RAW_SUPPORT=off   # Disable RAW+JPEG pairing (default is on)
 ```
 
 📖 **Complete Configuration Reference:** See [Installation Guide](docs/INSTALL.md#configuration-reference) for all environment variables, performance tuning, and advanced options.
@@ -148,8 +173,22 @@ Tested on 1627 photos with EXIF → RT-DETR → iNat21 → XMP Writer pipeline.
 
 ## Supported Image Formats
 
+**Standard formats:**
 - JPEG (`.jpg`, `.jpeg`)
 - PNG (`.png`)
+
+**RAW formats (enabled by default in v1.1):**
+- Nikon (`.nef`)
+- Canon (`.cr2`, `.cr3`)
+- Sony (`.arw`)
+- Adobe (`.dng`)
+- Fujifilm (`.raf`)
+- Olympus (`.orf`)
+- Panasonic (`.rw2`)
+
+**RAW+JPEG Pairing:** When enabled, Lumina intelligently pairs RAW and JPEG files with the same base filename (e.g., `IMG_001.jpg` + `IMG_001.nef`). The JPEG is used for faster AI analysis, and one XMP sidecar is created for the pair.
+
+**⚠️ RAW Format Limitations:** Lumina uses [LibRaw](https://www.libraw.org/supported-cameras) for RAW processing. Some newer formats like Nikon Z9 High Efficiency (HE/HE*) are not yet supported. For unsupported formats, shoot RAW+JPEG and enable pairing mode.
 
 **Note:** XMP sidecar files are only created when objects or species are detected in the photo. Photos without any detections will not have an XMP file generated.
 
@@ -209,8 +248,9 @@ This project uses the following AI models:
 
 - **iNat21** - EVA-02 model fine-tuned on iNaturalist 2021 (CC BY-NC 4.0)
   - Model: timm/eva02_large_patch14_clip_336.merged2b_ft_inat21
+  - Source: https://huggingface.co/timm/eva02_large_patch14_clip_336.merged2b_ft_inat21
   - Trainer: Ross Wightman (timm)
-  - Dataset: iNaturalist 2021 competition
+  - Dataset: [iNaturalist 2021 competition](https://github.com/visipedia/inat_comp/tree/master/2021)
 
 Built with:
 - PyTorch (BSD-3)

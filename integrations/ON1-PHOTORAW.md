@@ -121,7 +121,16 @@ docker run --rm \
   -v /path/to/your/Photos:/data/photos \
   -v /path/to/lumina-cache:/data/cache \
   stevenvanassche/lumina:cpu-latest
+
+# Or with RAW+JPEG pairing (new in v1.1)
+docker run --rm \
+  -v /path/to/your/Photos:/data/photos \
+  -v /path/to/lumina-cache:/data/cache \
+  -e LUMINA_RAW_SUPPORT=on \
+  stevenvanassche/lumina:cpu-latest
 ```
+
+> **New in v1.1:** Enable `LUMINA_RAW_SUPPORT=on` to automatically pair RAW and JPEG files with the same base filename. The JPEG is used for AI analysis, and both files get XMP sidecars with identical keywords.
 
 **Result:**
 ```
@@ -554,6 +563,7 @@ If photos are on NAS:
 
 1. **Shoot photos** → Copy to computer
 2. **Run Lumina** → Generate AI metadata (species, objects)
+   - Or enable **Watch Mode** (v1.1+) with `LUMINA_WATCH_MODE=on` for continuous processing
 3. **Open in On1 PhotoRAW** → Instant organization by species
 4. **Add manual keywords** → Locations, events, people
 5. **Edit photos** → With full metadata context
@@ -594,5 +604,5 @@ If photos are on NAS:
 
 ---
 
-**Version**: Lumina 1.0.0
-**Last Updated**: 2025-12-07
+**Version**: Lumina 1.1.0
+**Last Updated**: 2025-12-21
